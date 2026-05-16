@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Críticas Musicais</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-zinc-950 text-zinc-300 min-h-screen font-sans selection:bg-zinc-800">
+
+    <!-- Cabeçalho Minimalista e Editorial -->
+    <header class="max-w-4xl mx-auto pt-16 pb-12 px-6 border-b border-zinc-900 text-center">
+        <h1 class="text-4xl md:text-5xl font-serif font-light tracking-wide text-zinc-100">DISCOGRAFIA AVALIADA</h1>
+        <p class="text-xs uppercase tracking-[0.3em] text-zinc-500 mt-3 font-mono">Notas, impressões e arquivos pessoais</p>
+    </header>
+
+    <!-- Grid de Álbuns -->
+    <main class="max-w-4xl mx-auto px-6 py-12">
+        <div id="grid-albuns" class="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-x-16 md:gap-y-20">
+            <p class="text-zinc-600 font-mono text-xs tracking-wider col-span-full text-center">Buscando arquivos...</p>
+        </div>
+    </main>
+
+    <script>
+        const API_URL = 'http://127.0.0.1:8000/api/albuns';
+
+        async function carregarAlbuns() {
+            try {
+                const resposta = await fetch(API_URL);
+                const albuns = await resposta.json();
+                
+                const grid = document.getElementById('grid-albuns');
+                grid.innerHTML = '';
+
+                albuns.forEach(album => {
+                    const card = `
+                        <article class="group flex flex-col space-y-4">
+                            <!-- Container da Imagem com proporção 1:1 de Vinil -->
+                            <div class="aspect-square w-full overflow-hidden bg-zinc-900 filter grayscale contrast-125 group-hover:grayscale-0 transition-all duration-500 ease-in-out shadow-2xl">
+                                <img src="${album.capa_url}" alt="Capa do álbum ${album.titulo}" class="w-full h-full object-cover transform group-hover:scale-105 transition duration-700">
+                            </div>
+
+                            <!-- Informações (Estilo Crítica de Revista) -->
+                            <div class="flex flex-col space-y-2">
+                                <div class="flex justify-between items-baseline border-b border-zinc-900 pb-1">
+                                    <h2 class="text-xl font-serif font-normal text-zinc-100 tracking-wide">${album.titulo}</h2>
+                                    <span class="font-mono text-xs text-zinc-400 tracking-widest font-bold">${album.nota}/10</span>
+                                </div>
+                                
+                                <div class="flex space-x-2 text-xs font-mono uppercase tracking-wider text-zinc-500">
+                                    <span>${album.artista}</span>
+                                    <span>•</span>
+                                    <span>${album.ano}</span>
+                                </div>
+
+                                <p class="text-zinc-400 text-sm leading-relaxed pt-2 font-serif italic font-light">
+                                    "${album.comentario}"
+                                </p>
+                            </div>
+                        </article>
+                    `;
+                    grid.innerHTML += card;
+                });
+
+            } catch (erro) {
+                console.error(erro);
+                document.getElementById('grid-albuns').innerHTML = 
+                    `<p class="text-zinc-600 font-mono text-xs col-span-full text-center">Erro na conexão com o servidor de álbuns.</p>`;
+            }
+        }
+
+        carregarAlbuns();
+    </script>
+</body>
+</html>
