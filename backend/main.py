@@ -1,60 +1,55 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware  # 1. Importe o middleware
+from fastapi import FastAPI, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
+import models
+from database import engine, get_db
 
-app = FastAPI(title="Minha API de Músicas")
+models.Base.metadata.create_all(bind=engine)
 
-# 2. Configure quais origens podem acessar sua API (vamos liberar tudo por enquanto para facilitar)
+app = FastAPI(title="Minha API de Músicas com Banco de Dados")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Permite que qualquer frontend acesse a API localmente
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],  # Permite todos os métodos (GET, POST, etc.)
+    allow_methods=["*"],
     allow_headers=["*"],
 )
-
-class Album(BaseModel):
+class AlbumSchema(BaseModel):
     titulo: str
     artista: str
     ano: int
-    nota: int = Field(..., ge=0, le=10) 
+    nota: float = Field(..., ge=0, le=10)
     comentario: str
     capa_url: str
 
-meus_albuns = [
-    {
-        "titulo": "Reise, Reise",
-        "artista": "Rammstein",
-        "ano": 2004,
-        "nota": 10,
-        "comentario": "Pessoalmente meu álbum favorito da banda, onde acredito terem alcançado o ponto de equilíbrio entre maturidade e agressividade sonora, além de letras mais profundas e interessantes.",
-        "capa_url": "https://dn710605.ca.archive.org/0/items/mbid-2f55fcce-b536-3ec4-92f7-54f5f8fa1edf/mbid-2f55fcce-b536-3ec4-92f7-54f5f8fa1edf-21713078387.jpg"
-    },
-    {
-        "titulo": "Deliverance",
-        "artista": "Opeth",
-        "ano": 2002,
-        "nota": 10,
-        "comentario": "A cada audição essa peça se torna melhor. O ápice da fase mais pesada da banda após os 3 primeiros álbuns, com uma produção crua, agressiva e bruta, mas sem perder a complexidade e a melodia características da banda.",
-        "capa_url": "https://ia801600.us.archive.org/23/items/mbid-777871be-214d-4a9c-9476-978acd1c44c5/mbid-777871be-214d-4a9c-9476-978acd1c44c5-17989501029.jpg"
-    }
-]
-
 @app.get("/")
 def home():
-    return {"mensagem": "Bem-vindo à API do meu site de reviews de músicas!"}
+    return {"mensagem": "API com banco de dados ativa."}
 
+# ROTA GET: Busca os álbuns salvos no banco de dados
 @app.get("/api/albuns")
-def listar_albuns():
-    return meus_albuns
+def listar_albuns(db: Session = Depends(get_db)):
+    # O SQLAlchemy faz um 'SELECT * FROM albuns' por baixo dos panos
+    albuns_do_banco = db.query(models.AlbumModel).all()
+    return albuns_do_banco
 
+# ROTA POST: Salva um novo álbum no banco de dados
 @app.post("/api/albuns")
-def adicionar_album(album: Album):
-
-    novo_album = album.model_dump()
-
-    novo_album["id"] = len(meus_albuns) + 1
-
-    meus_albuns.append(novo_album)
-    return {"mensagem": "Avaliação adicionada", "album": novo_album}
-
+def adicionar_album(album: AlbumSchema, db: Session = Depends(get_db)):
+    # Transforma os dados que vieram do site em um modelo de banco de dados
+    novo_album = models.AlbumModel(
+        titulo=album.titulo,
+        artista=album.artista,
+        ano=album.ano,
+        nota=album.nota,
+        comentario=album.comentario,
+        capa_url=album.capa_url
+    )
+    
+    db.add(novo_album)      # Coloca o álbum na fila para salvar
+    db.commit()             # Grava de fato no arquivo do HD!
+    db.refresh(novo_album)  # Atualiza o objeto para pegar o ID gerado pelo banco
+    
+    return {"mensagem": "Salvo no banco de dados!", "album": novo_album}
