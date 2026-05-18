@@ -8,14 +8,36 @@
 </head>
 <body class="bg-zinc-950 text-zinc-300 min-h-screen font-sans selection:bg-zinc-800">
 
-    <!-- Cabeçalho Minimalista e Editorial -->
-    <header class="max-w-4xl mx-auto pt-16 pb-12 px-6 border-b border-zinc-900 text-center">
+    <header class="max-w-4xl mx-auto pt-16 pb-8 px-6 text-center">
         <h1 class="text-4xl md:text-5xl font-serif font-light tracking-wide text-zinc-100">DISCOGRAFIA AVALIADA</h1>
         <p class="text-xs uppercase tracking-[0.3em] text-zinc-500 mt-3 font-mono">Notas, impressões e arquivos pessoais</p>
     </header>
 
-    <!-- Grid de Álbuns -->
-    <main class="max-w-4xl mx-auto px-6 py-12">
+    <section class="max-w-xl mx-auto px-6 mb-16">
+        <form id="form-album" class="border border-zinc-900 p-6 space-y-4 bg-zinc-950/50">
+            <h3 class="font-serif text-lg text-zinc-200 border-b border-zinc-900 pb-2">Nova Crítica</h3>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <input type="text" id="titulo" placeholder="Título do Álbum" required class="bg-zinc-900 border border-zinc-800 p-2 text-sm text-zinc-100 focus:outline-none focus:border-zinc-700">
+                <input type="text" id="artista" placeholder="Artista" required class="bg-zinc-900 border border-zinc-800 p-2 text-sm text-zinc-100 focus:outline-none focus:border-zinc-700">
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <input type="number" id="ano" placeholder="Ano de Lançamento" required class="bg-zinc-900 border border-zinc-800 p-2 text-sm text-zinc-100 focus:outline-none focus:border-zinc-700">
+                <input type="number" id="nota" placeholder="Nota (0 a 10)" step="0.1" min="0" max="10" required class="bg-zinc-900 border border-zinc-800 p-2 text-sm text-zinc-100 focus:outline-none focus:border-zinc-700">
+            </div>
+
+            <input type="url" id="capa_url" placeholder="URL da Imagem da Capa" required class="w-full bg-zinc-900 border border-zinc-800 p-2 text-sm text-zinc-100 focus:outline-none focus:border-zinc-700">
+            
+            <textarea id="comentario" placeholder="Escreva sua crítica aqui..." rows="3" required class="w-full bg-zinc-900 border border-zinc-800 p-2 text-sm text-zinc-100 focus:outline-none focus:border-zinc-700 font-serif italic"></textarea>
+            
+            <button type="submit" class="w-full bg-zinc-100 hover:bg-zinc-200 text-zinc-950 font-mono text-xs uppercase tracking-widest py-2.5 transition duration-300 font-bold">
+                Publicar Registro
+            </button>
+        </form>
+    </section>
+
+    <main class="max-w-4xl mx-auto px-6 pb-24 border-t border-zinc-900 pt-12">
         <div id="grid-albuns" class="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-x-16 md:gap-y-20">
             <p class="text-zinc-600 font-mono text-xs tracking-wider col-span-full text-center">Buscando arquivos...</p>
         </div>
@@ -24,6 +46,7 @@
     <script>
         const API_URL = 'http://127.0.0.1:8000/api/albuns';
 
+        // 1. Função para carregar e listar os álbuns
         async function carregarAlbuns() {
             try {
                 const resposta = await fetch(API_URL);
@@ -35,24 +58,19 @@
                 albuns.forEach(album => {
                     const card = `
                         <article class="group flex flex-col space-y-4">
-                            <!-- Container da Imagem com proporção 1:1 de Vinil -->
                             <div class="aspect-square w-full overflow-hidden bg-zinc-900 filter grayscale contrast-125 group-hover:grayscale-0 transition-all duration-500 ease-in-out shadow-2xl">
-                                <img src="${album.capa_url}" alt="Capa do álbum ${album.titulo}" class="w-full h-full object-cover transform group-hover:scale-105 transition duration-700">
+                                <img src="${album.capa_url}" alt="Capa" class="w-full h-full object-cover transform group-hover:scale-105 transition duration-700">
                             </div>
-
-                            <!-- Informações (Estilo Crítica de Revista) -->
                             <div class="flex flex-col space-y-2">
                                 <div class="flex justify-between items-baseline border-b border-zinc-900 pb-1">
                                     <h2 class="text-xl font-serif font-normal text-zinc-100 tracking-wide">${album.titulo}</h2>
                                     <span class="font-mono text-xs text-zinc-400 tracking-widest font-bold">${album.nota}/10</span>
                                 </div>
-                                
                                 <div class="flex space-x-2 text-xs font-mono uppercase tracking-wider text-zinc-500">
                                     <span>${album.artista}</span>
                                     <span>•</span>
                                     <span>${album.ano}</span>
                                 </div>
-
                                 <p class="text-zinc-400 text-sm leading-relaxed pt-2 font-serif italic font-light">
                                     "${album.comentario}"
                                 </p>
@@ -61,14 +79,49 @@
                     `;
                     grid.innerHTML += card;
                 });
-
             } catch (erro) {
                 console.error(erro);
-                document.getElementById('grid-albuns').innerHTML = 
-                    `<p class="text-zinc-600 font-mono text-xs col-span-full text-center">Erro na conexão com o servidor de álbuns.</p>`;
             }
         }
 
+        // 2. Evento para capturar o envio do formulário
+        document.getElementById('form-album').addEventListener('submit', async (e) => {
+            e.preventDefault(); // Impede a página de recarregar do jeito tradicional
+
+            // Monta o objeto com os dados digitados
+            const dadosAlbum = {
+                titulo: document.getElementById('titulo').value,
+                artista: document.getElementById('artista').value,
+                ano: parseInt(document.getElementById('ano').value),
+                nota: parseFloat(document.getElementById('nota').value),
+                capa_url: document.getElementById('capa_url').value,
+                comentario: document.getElementById('comentario').value
+            };
+
+            try {
+                // Envia os dados para o FastAPI usando o método POST
+                const resposta = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(dadosAlbum)
+                });
+
+                if (resposta.ok) {
+                    document.getElementById('form-album').reset(); // Limpa os campos do formulário
+                    carregarAlbuns(); // Recarrega a lista para mostrar o novo álbum na hora!
+                } else {
+                    const erroDetalhado = await resposta.json();
+                    console.error("⚠️ DETALHES DO ERRO NO FASTAPI:", erroDetalhado);
+                    alert("Erro 422: O servidor barrou um campo. Pressione F12 e olhe a aba 'Console'");
+                }
+            } catch (erro) {
+                console.error("Erro na requisição POST:", erro);
+            }
+        });
+
+        // Execução inicial
         carregarAlbuns();
     </script>
 </body>

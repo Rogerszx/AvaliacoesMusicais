@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minhas Avaliações de Músicas</title>
+    <!-- Tailwind CSS para estilização rápida -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen font-sans">
+
+    <!-- Cabeçalho -->
+    <header class="border-b border-gray-800 py-6 text-center">
+        <h1 class="text-3xl font-bold tracking-wider text-indigo-400">🎧 MusicReview</h1>
+        <p class="text-gray-400 mt-2 text-sm">Meu arquivo pessoal de álbuns e notas</p>
+    </header>
+
+    <!-- Conteúdo Principal -->
+    <main class="max-w-5xl mx-auto px-4 py-10">
+        <h2 class="text-xl font-semibold mb-6 text-gray-300">Álbuns Recentes</h2>
+        
+        <!-- Grid onde os álbuns serão injetados pelo JavaScript -->
+        <div id="grid-albuns" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Um efeito de carregamento inicial -->
+            <p class="text-gray-500 col-span-full text-center">Carregando avaliações...</p>
+        </div>
+    </main>
+
+    <!-- JavaScript para conectar com o FastAPI -->
+    <script>
+        const API_URL = 'http://127.0.0.1:8000/api/albuns';
+
+        async function carregarAlbuns() {
+            try {
+                // Faz a requisição para o servidor FastAPI
+                const resposta = await fetch(API_URL);
+                const albuns = await resposta.json();
+                
+                const grid = document.getElementById('grid-albuns');
+                grid.innerHTML = ''; // Limpa o texto de carregamento
+
+                // Loop para renderizar cada álbum retornado pelo JSON
+                albuns.forEach(album => {
+                    const card = `
+                        <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg flex flex-col justify-between">
+                            <div>
+                                <div class="flex justify-between items-start">
+                                    <h3 class="text-lg font-bold text-white">${album.titulo}</h3>
+                                    <span class="bg-indigo-600 text-white text-xs px-2.5 py-1 rounded-full font-bold">
+                                        ⭐ ${album.nota}/10
+                                    </span>
+                                </div>
+                                <p class="text-indigo-400 text-sm mb-3">${album.artista} • <span class="text-gray-500">${album.ano}</span></p>
+                                <p class="text-gray-300 text-sm italic">"${album.comentario}"</p>
+                            </div>
+                        </div>
+                    `;
+                    grid.innerHTML += card;
+                });
+
+            } catch (erro) {
+                console.error("Erro ao buscar dados da API:", erro);
+                document.getElementById('grid-albuns').innerHTML = 
+                    `<p class="text-red-400 col-span-full text-center">Não foi possível carregar as avaliações. O backend está ligado?</p>`;
+            }
+        }
+
+        // Executa a função assim que a página carrega
+        carregarAlbuns();
+    </script>
+</body>
+</html>
