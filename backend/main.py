@@ -31,14 +31,12 @@ def home():
 # ROTA GET: Busca os álbuns salvos no banco de dados
 @app.get("/api/albuns")
 def listar_albuns(db: Session = Depends(get_db)):
-    # O SQLAlchemy faz um 'SELECT * FROM albuns' por baixo dos panos
     albuns_do_banco = db.query(models.AlbumModel).all()
     return albuns_do_banco
 
 # ROTA POST: Salva um novo álbum no banco de dados
 @app.post("/api/albuns")
 def adicionar_album(album: AlbumSchema, db: Session = Depends(get_db)):
-    # Transforma os dados que vieram do site em um modelo de banco de dados
     novo_album = models.AlbumModel(
         titulo=album.titulo,
         artista=album.artista,
@@ -47,9 +45,22 @@ def adicionar_album(album: AlbumSchema, db: Session = Depends(get_db)):
         comentario=album.comentario,
         capa_url=album.capa_url
     )
-    
-    db.add(novo_album)      # Coloca o álbum na fila para salvar
-    db.commit()             # Grava de fato no arquivo do HD!
-    db.refresh(novo_album)  # Atualiza o objeto para pegar o ID gerado pelo banco
+
+    db.add(novo_album)     
+    db.commit()             
+    db.refresh(novo_album)  
     
     return {"mensagem": "Salvo no banco de dados!", "album": novo_album}
+
+
+@app.delete("/api/albuns/{album_id}")
+def deletar_album(album_id: int, db: Session = Depends(get_db)):
+    album_para_deletar = db.query(models.AlbumModel).filter(models.AlbumModel.id == album_id).first()
+    
+    if not album_para_deletar:
+        return {"Álbum não encontrado."}
+    
+    db.delete(album_para_deletar)
+    db.commit()
+    
+    return {"mensagem": "Álbum deletado"}

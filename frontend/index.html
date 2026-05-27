@@ -10,7 +10,7 @@
 
     <header class="max-w-4xl mx-auto pt-16 pb-8 px-6 text-center">
         <h1 class="text-4xl md:text-5xl font-serif font-light tracking-wide text-zinc-100">AVALIAÇÃO DE DISCOGRAFIAS</h1>
-        <p class="text-xs uppercase tracking-[0.3em] text-zinc-600 mt-3 font-mono">Notas e impressões</p>
+        <p class="text-xs uppercase tracking-[0.3em] text-zinc-600 mt-3 font-mono">By Roger Gonçalves</p>
     </header>
 
     <section class="max-w-xl mx-auto px-6 mb-16">
@@ -44,85 +44,111 @@
     </main>
 
     <script>
-        const API_URL = 'http://127.0.0.1:8000/api/albuns';
+    const API_URL = 'http://127.0.0.1:8000/api/albuns';
 
-        // 1. Função para carregar e listar os álbuns
-        async function carregarAlbuns() {
-            try {
-                const resposta = await fetch(API_URL);
-                const albuns = await resposta.json();
-                
-                const grid = document.getElementById('grid-albuns');
-                grid.innerHTML = '';
+    // 1. Função para carregar e listar os álbuns
+    async function carregarAlbuns() {
+        try {
+            const resposta = await fetch(API_URL);
+            const albuns = await resposta.json();
+            
+            const grid = document.getElementById('grid-albuns');
+            grid.innerHTML = '';
 
-                albuns.forEach(album => {
-                    const card = `
-                        <article class="group flex flex-col space-y-4">
-                            <div class="aspect-square w-full overflow-hidden bg-zinc-900 filter grayscale contrast-125 group-hover:grayscale-0 transition-all duration-500 ease-in-out shadow-2xl">
-                                <img src="${album.capa_url}" alt="Capa" class="w-full h-full object-cover transform group-hover:scale-105 transition duration-700">
-                            </div>
-                            <div class="flex flex-col space-y-2">
-                                <div class="flex justify-between items-baseline border-b border-zinc-900 pb-1">
-                                    <h2 class="text-xl font-serif font-normal text-zinc-100 tracking-wide">${album.titulo}</h2>
-                                    <span class="font-mono text-xs text-zinc-400 tracking-widest font-bold">${album.nota}/10</span>
-                                </div>
-                                <div class="flex space-x-2 text-xs font-mono uppercase tracking-wider text-zinc-500">
-                                    <span>${album.artista}</span>
-                                    <span>•</span>
-                                    <span>${album.ano}</span>
-                                </div>
-                                <p class="text-zinc-400 text-sm leading-relaxed pt-2 font-serif italic font-light">
-                                    "${album.comentario}"
-                                </p>
-                            </div>
-                        </article>
-                    `;
-                    grid.innerHTML += card;
-                });
-            } catch (erro) {
-                console.error(erro);
+            if (albuns.length === 0) {
+                grid.innerHTML = `<p class="text-zinc-600 font-mono text-xs col-span-full text-center">Nenhum registro encontrado. Use o formulário acima para começar.</p>`;
+                return;
             }
+
+            albuns.forEach(album => {
+                const card = `
+                    <article class="group flex flex-col space-y-4">
+                        <div class="aspect-square w-full overflow-hidden bg-zinc-900 filter grayscale contrast-125 group-hover:grayscale-0 transition-all duration-500 ease-in-out shadow-2xl">
+                            <img src="${album.capa_url}" alt="Capa" class="w-full h-full object-cover transform group-hover:scale-105 transition duration-700">
+                        </div>
+                        <div class="flex flex-col space-y-2">
+                            <div class="flex justify-between items-baseline border-b border-zinc-900 pb-1">
+                                <h2 class="text-xl font-serif font-normal text-zinc-100 tracking-wide">${album.titulo}</h2>
+                                <span class="font-mono text-xs text-zinc-400 tracking-widest font-bold">${album.nota}/10</span>
+                            </div>
+                            <div class="flex space-x-2 text-xs font-mono uppercase tracking-wider text-zinc-500">
+                                <span>${album.artista}</span>
+                                <span>•</span>
+                                <span>${album.ano}</span>
+                            </div>
+                            <p class="text-zinc-400 text-sm leading-relaxed pt-2 font-serif italic font-light">
+                                "${album.comentario}"
+                            </p>
+                            
+                            <button onclick="deletarAlbum(${album.id})" class="text-[12.5px] uppercase tracking-widest text-zinc-600 hover:text-red-400 font-mono text-left pt-4 transition duration-300 self-start">
+                                [ Eliminar Registro ]
+                            </button>
+                        </div>
+                    </article>
+                `;
+                grid.innerHTML += card;
+            });
+        } catch (erro) {
+            console.error(erro);
+        }
+    }
+
+    // 2. Evento para capturar o envio do formulário (Continua igual)
+    document.getElementById('form-album').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const dadosAlbum = {
+            titulo: document.getElementById('titulo').value,
+            artista: document.getElementById('artista').value,
+            ano: parseInt(document.getElementById('ano').value),
+            nota: parseFloat(document.getElementById('nota').value),
+            capa_url: document.getElementById('capa_url').value,
+            comentario: document.getElementById('comentario').value
+        };
+
+        try {
+            const resposta = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dadosAlbum)
+            });
+
+            if (resposta.ok) {
+                document.getElementById('form-album').reset();
+                carregarAlbuns();
+            } else {
+                const erroDetalhado = await resposta.json();
+                console.error("⚠️ ERRO:", erroDetalhado);
+            }
+        } catch (erro) {
+            console.error("Erro na requisição POST:", erro);
+        }
+    });
+
+    // 🔥 3. NOVA FUNÇÃO: Dispara a requisição DELETE para o Backend
+    async function deletarAlbum(id) {
+        // Uma confirmação nativa do navegador para o usuário não clicar sem querer
+        if (!confirm("Tem certeza que deseja apagar permanentemente esta crítica?")) {
+            return;
         }
 
-        // 2. Evento para capturar o envio do formulário
-        document.getElementById('form-album').addEventListener('submit', async (e) => {
-            e.preventDefault(); // Impede a página de recarregar do jeito tradicional
+        try {
+            const resposta = await fetch(`${API_URL}/${id}`, {
+                method: 'DELETE'
+            });
 
-            // Monta o objeto com os dados digitados
-            const dadosAlbum = {
-                titulo: document.getElementById('titulo').value,
-                artista: document.getElementById('artista').value,
-                ano: parseInt(document.getElementById('ano').value),
-                nota: parseFloat(document.getElementById('nota').value),
-                capa_url: document.getElementById('capa_url').value,
-                comentario: document.getElementById('comentario').value
-            };
-
-            try {
-                // Envia os dados para o FastAPI usando o método POST
-                const resposta = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(dadosAlbum)
-                });
-
-                if (resposta.ok) {
-                    document.getElementById('form-album').reset(); // Limpa os campos do formulário
-                    carregarAlbuns(); // Recarrega a lista para mostrar o novo álbum na hora!
-                } else {
-                    const erroDetalhado = await resposta.json();
-                    console.error("DETALHES DO ERRO NO FASTAPI:", erroDetalhado);
-                    alert("Erro 422: O servidor barrou um campo. Pressione F12 e olhe a aba 'Console'");
-                }
-            } catch (erro) {
-                console.error("Erro na requisição POST:", erro);
+            if (resposta.ok) {
+                carregarAlbuns(); // Recarrega a lista atualizada direto do banco de dados!
+            } else {
+                alert("Erro ao tentar deletar o álbum.");
             }
-        });
+        } catch (erro) {
+            console.error("Erro na requisição DELETE:", erro);
+        }
+    }
 
-        // Execução inicial
-        carregarAlbuns();
-    </script>
+    // Execução inicial
+    carregarAlbuns();
+</script>
 </body>
 </html>
